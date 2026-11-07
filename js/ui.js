@@ -408,6 +408,10 @@ function bindBrushControls() {
   document.getElementById('brush-opacity').addEventListener('input', e => {
     brushOpacity = parseInt(e.target.value);
   });
+  const finishSelect = document.getElementById('finish-select');
+  finishSelect.addEventListener('change', e => { activeFinish = e.target.value; });
+  document.getElementById('undo-btn').addEventListener('click', () => { if (activeProductId) undoLayer(activeProductId); });
+  document.getElementById('redo-btn').addEventListener('click', () => { if (activeProductId) redoLayer(activeProductId); });
 
   const eraserBtn = document.getElementById('eraser-btn');
   eraserBtn.addEventListener('click', () => {
@@ -446,12 +450,16 @@ function bindKeyboard() {
     if (e.key === 'Escape') deselect();
     if ((e.key === 'e' || e.key === 'E') && activeProductId) {
       eraserMode = !eraserMode;
+      if (eraserMode) blendingMode = false;
       document.getElementById('eraser-btn').classList.toggle('active', eraserMode);
+      document.getElementById('blend-btn').classList.toggle('active', blendingMode);
       updateCursor();
     }
     if ((e.key === 'b' || e.key === 'B') && activeProductId) {
       blendingMode = !blendingMode;
+      if (blendingMode) eraserMode = false;
       document.getElementById('blend-btn').classList.toggle('active', blendingMode);
+      document.getElementById('eraser-btn').classList.toggle('active', eraserMode);
       updateCursor();
     }
   });

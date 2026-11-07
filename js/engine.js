@@ -20,6 +20,8 @@ let activeProductId = null;
 let activeShade     = null;
 let brushRadius     = 20;
 let brushOpacity    = 5;
+let activeFinish = 'auto';
+const FINISHES = ['auto', 'matte', 'velvet', 'satin', 'gloss', 'shimmer', 'glitter', 'metallic', 'holographic'];
 
 let activeBrowStyleId = null;
 let activeLashStyleId = null;
@@ -339,6 +341,26 @@ function drawLipShine() {
 }
 
 // ─── ZONE CHECK ───────────────────────────────────────────────────────────────
+// Build one clipping path from the product's allowed face regions. Clipping the
+// whole brush footprint (not just its centre) prevents soft edges crossing the
+// boundary of the selected makeup area.
+function clipToProductZone(targetCtx, productId) {
+  const product = PRODUCTS[productId];
+  const ellipses = product && ZONES[product.zone];
+  if (!ellipses || !ellipses.length) return false;
+
+  targetCtx.beginPath();
+  ellipses.forEach(e => {
+    targetCtx.ellipse(
+      e.cx * FACE_W, e.cy * FACE_H,
+      e.rx * FACE_W, e.ry * FACE_H,
+      0, 0, Math.PI * 2
+    );
+  });
+  targetCtx.clip();
+  return true;
+}
+
 function isInZone(productId, x, y) {
   const key      = PRODUCTS[productId].zone;
   const ellipses = ZONES[key];
@@ -358,17 +380,68 @@ function hexToRgb(hex) {
   return { r: parseInt(h.slice(0,2),16), g: parseInt(h.slice(2,4),16), b: parseInt(h.slice(4,6),16) };
 }
 
+// Stable coordinate hash keeps shimmer placement deterministic across redraws.
+function shimmerHash(x, y, salt) {
+  const n = Math.sin((Math.floor(x * 0.73) + salt * 17) * 12.9898 +
+    (Math.floor(y * 0.73) - salt * 31) * 78.233) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+function drawShimmerStamp(targetCtx, x, y, radius, color, finish = 'shimmer') {
+  targetCtx.save();
+  targetCtx.globalCompositeOperation = 'screen';
+  const glintCount = finish === 'glitter' || finish === 'holographic' ? 9 : 4;
+  for (let i = 0; i < glintCount; i++) {
+    const angle = shimmerHash(x, y, i + 1) * Math.PI * 2;
+    const distance = shimmerHash(y, x, i + 7) * radius * 0.68;
+    const px = x + Math.cos(angle) * distance;
+    const py = y + Math.sin(angle) * distance;
+    const size = (finish === 'glitter' || finish === 'holographic' ? 0.8 : 0.55) + shimmerHash(x + i, y - i, i + 13) * (finish === 'glitter' ? 2.1 : 1.35);
+    const alpha = 0.12 + shimmerHash(y + i, x - i, i + 19) * (finish === 'glitter' ? 0.34 : 0.22);
+    targetCtx.fillStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+    targetCtx.beginPath();
+    targetCtx.arc(px, py, size, 0, Math.PI * 2);
+    targetCtx.fill();
+  }
+  // Metallic and holographic finishes add a restrained directional colour sheen.
+  if (finish === 'metallic' || finish === 'holographic') {
+    const sheen = targetCtx.createLinearGradient(x - radius, y - radius, x + radius, y + radius);
+    sheen.addColorStop(0, 'rgba(255,255,255,0)');
+    sheen.addColorStop(0.42, finish === 'holographic' ? 'rgba(170,225,255,0.34)' : 'rgba(255,255,255,0.42)');
+    sheen.addColorStop(0.58, finish === 'holographic' ? 'rgba(255,170,225,0.30)' : 'rgba(255,245,210,0.25)');
+    sheen.addColorStop(1, 'rgba(255,255,255,0)');
+    targetCtx.globalAlpha = 0.75;
+    targetCtx.fillStyle = sheen;
+    targetCtx.beginPath(); targetCtx.arc(x, y, radius, 0, Math.PI * 2); targetCtx.fill();
+  }
+  // A restrained colour lift preserves the selected shade beneath the glints.
+  targetCtx.globalAlpha = finish === 'satin' ? 0.17 : 0.10;
+  targetCtx.fillStyle = color;
+  targetCtx.beginPath();
+  targetCtx.arc(x, y, radius * 0.52, 0, Math.PI * 2);
+  targetCtx.fill();
+  targetCtx.restore();
+}
+
 function applyStroke(x, y, pressure = 0.5, speed = 0, shouldRender = true) {
   if (!activeProductId) return;
   if (!eraserMode && !activeShade) return;
 
-  const product  = PRODUCTS[activeProductId];
-  const lctx     = layerCtxs[activeProductId];
-  const effR     = product.radius * (brushRadius / 20);
+  const product = PRODUCTS[activeProductId];
+  const lctx = layerCtxs[activeProductId];
+  if (!product || !lctx) return;
+
+  // Pressure changes both brush footprint and pigment load. A neutral 0.5
+  // pressure keeps mouse/touch behaviour identical to the previous baseline.
+  const normalizedPressure = Math.max(0.1, Math.min(1, Number(pressure) || 0.5));
+  const finish = activeFinish === 'auto' ? (activeShade && activeShade.finish) || (activeShade && activeShade.shimmer ? 'shimmer' : 'matte') : activeFinish;
+  const pressureScale = 0.78 + normalizedPressure * 0.44;
+  const effR = product.radius * (brushRadius / 20) * pressureScale;
 
   if (!eraserMode && !isInZone(activeProductId, x, y)) return;
 
   lctx.save();
+  if (!eraserMode) clipToProductZone(lctx, activeProductId);
 
   if (eraserMode) {
     const g = lctx.createRadialGradient(x, y, 0, x, y, effR * 1.3);
@@ -382,13 +455,16 @@ function applyStroke(x, y, pressure = 0.5, speed = 0, shouldRender = true) {
     // Soft airbrush — 5-stop gradient for natural feathering
     // Real pressure is available on many styluses. Mouse/touch commonly report
     // a fixed or missing value, so pressure is normalised with a safe fallback.
-    const pressureFactor = Math.max(0.35, Math.min(1.35, 0.55 + pressure));
+    const pressureFactor = 0.55 + normalizedPressure;
     // Slower strokes deposit slightly more pigment; fast swipes stay lighter.
-    const speedFactor = 1.12 - Math.min(0.55, speed / 900);
-    const opacity = product.opacityStep * (brushOpacity / 5) * pressureFactor * speedFactor;
+    const safeSpeed = Number.isFinite(speed) ? Math.max(0, speed) : 0;
+    const speedFactor = 1.12 - Math.min(0.55, safeSpeed / 900);
+    const finishOpacity = ({ matte: 1, velvet: 0.88, satin: 0.94, gloss: 1.12, shimmer: 0.92, glitter: 0.78, metallic: 0.98, holographic: 0.90 })[finish] || 1;
+    const opacity = product.opacityStep * (brushOpacity / 5) * pressureFactor * speedFactor * finishOpacity;
     const { r, g, b } = hexToRgb(activeShade.hex);
     const gr = lctx.createRadialGradient(x, y, 0, x, y, effR);
-    gr.addColorStop(0,    `rgba(${r},${g},${b},${(opacity * 0.70).toFixed(4)})`);
+    const centerBoost = finish === 'gloss' || finish === 'satin' ? 0.82 : finish === 'velvet' ? 0.62 : 0.70;
+    gr.addColorStop(0,    `rgba(${r},${g},${b},${(opacity * centerBoost).toFixed(4)})`);
     gr.addColorStop(0.20, `rgba(${r},${g},${b},${(opacity * 0.48).toFixed(4)})`);
     gr.addColorStop(0.45, `rgba(${r},${g},${b},${(opacity * 0.22).toFixed(4)})`);
     gr.addColorStop(0.72, `rgba(${r},${g},${b},${(opacity * 0.07).toFixed(4)})`);
@@ -401,6 +477,13 @@ function applyStroke(x, y, pressure = 0.5, speed = 0, shouldRender = true) {
   lctx.beginPath();
   lctx.arc(x, y, effR, 0, Math.PI * 2);
   lctx.fill();
+
+  // Existing shimmer shades now receive a subtle, repeatable micro-sparkle
+  // finish instead of being rendered exactly like matte pigments.
+  if (!eraserMode && ['shimmer', 'glitter', 'metallic', 'holographic', 'satin'].includes(finish)) {
+    const { r, g, b } = hexToRgb(activeShade.hex);
+    drawShimmerStamp(lctx, x, y, effR, `rgb(${r},${g},${b})`, finish);
+  }
   lctx.restore();
   if (shouldRender) render();
 }
@@ -408,9 +491,14 @@ function applyStroke(x, y, pressure = 0.5, speed = 0, shouldRender = true) {
 // ─── BLEND STROKE ─────────────────────────────────────────────────────────────
 function applyBlendStroke(x, y, pressure = 0.5, shouldRender = true) {
   if (!activeProductId) return;
-  const c    = layers[activeProductId];
+  const product = PRODUCTS[activeProductId];
+  const c = layers[activeProductId];
   const lctx = layerCtxs[activeProductId];
-  const effR = PRODUCTS[activeProductId].radius * (brushRadius / 20) * 2.2;
+  if (!product || !c || !lctx || !isInZone(activeProductId, x, y)) return;
+
+  const normalizedPressure = Math.max(0.1, Math.min(1, Number(pressure) || 0.5));
+  const pressureScale = 0.78 + normalizedPressure * 0.44;
+  const effR = product.radius * (brushRadius / 20) * pressureScale * 2.2;
 
   // Reuse one scratch canvas instead of allocating a new canvas per stamp.
   if (!blendScratch) {
@@ -419,17 +507,30 @@ function applyBlendStroke(x, y, pressure = 0.5, shouldRender = true) {
     blendScratchCtx = blendScratch.getContext('2d');
   }
   const tc = blendScratchCtx;
-  tc.clearRect(0, 0, FACE_W, FACE_H);
-  tc.filter = `blur(${Math.max(3, Math.round(effR * 0.18))}px)`;
-  tc.drawImage(c, 0, 0);
+  const blurPx = Math.max(3, Math.round(effR * 0.18));
+  // Only refresh the local region around this stamp. The old implementation
+  // blurred and copied the entire makeup layer for every interpolated point,
+  // doing far more work than a local smudge requires.
+  const padding = Math.ceil(blurPx * 3);
+  const left = Math.max(0, Math.floor(x - effR - padding));
+  const top = Math.max(0, Math.floor(y - effR - padding));
+  const right = Math.min(FACE_W, Math.ceil(x + effR + padding));
+  const bottom = Math.min(FACE_H, Math.ceil(y + effR + padding));
+  const width = Math.max(1, right - left);
+  const height = Math.max(1, bottom - top);
+  tc.clearRect(left, top, width, height);
+  tc.filter = `blur(${blurPx}px)`;
+  tc.drawImage(c, left, top, width, height, left, top, width, height);
   tc.filter = 'none';
 
   // Composite blurred version into clip circle
   lctx.save();
+  clipToProductZone(lctx, activeProductId);
   lctx.beginPath();
   lctx.arc(x, y, effR, 0, Math.PI * 2);
   lctx.clip();
-  lctx.globalAlpha = 0.22 * (brushOpacity / 5) * Math.max(0.35, Math.min(1.35, 0.55 + pressure));
+  const blendStrength = ({ matte: 0.18, velvet: 0.20, satin: 0.22, gloss: 0.12, shimmer: 0.10, glitter: 0.06, metallic: 0.08, holographic: 0.06 })[activeFinish] || 0.22;
+  lctx.globalAlpha = blendStrength * (brushOpacity / 5) * (0.55 + normalizedPressure);
   lctx.drawImage(blendScratch, 0, 0);
   lctx.restore();
   if (shouldRender) render();
@@ -500,7 +601,9 @@ function getPointerPressure(e) {
 }
 
 function onPointerDown(e) {
-  if (!activeProductId || (e.button !== undefined && e.button !== 0)) return;
+  // Ignore secondary pointers while a stroke is active; this prevents a
+  // second finger from stealing pointer capture and corrupting the first path.
+  if (isDrawing || !activeProductId || (e.button !== undefined && e.button !== 0)) return;
   e.preventDefault();
   activePointerId = e.pointerId;
   try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
@@ -508,9 +611,16 @@ function onPointerDown(e) {
   lastX = null; lastY = null;
   lastPressure = getPointerPressure(e);
   lastPointerTime = performance.now();
-  saveUndo(activeProductId);
   bounceApplicator();
   const { x, y } = getPos(e);
+  const canStartStroke = eraserMode || isInZone(activeProductId, x, y);
+  if (!canStartStroke) {
+    isDrawing = false;
+    activePointerId = null;
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    return;
+  }
+  saveUndo(activeProductId);
   if (blendingMode) applyBlendStroke(x, y, lastPressure, false);
   else applyStroke(x, y, lastPressure, 0, false);
   lastX = x; lastY = y;
@@ -553,6 +663,9 @@ function onPointerMove(e) {
 
 function onPointerUp(e) {
   if (e && activePointerId !== null && e.pointerId !== activePointerId) return;
+  if (activePointerId !== null && canvas && canvas.hasPointerCapture(activePointerId)) {
+    try { canvas.releasePointerCapture(activePointerId); } catch (_) {}
+  }
   isDrawing = false;
   lastX = null; lastY = null;
   lastPointerTime = 0;

@@ -458,3 +458,33 @@ body.has-applicator * { cursor: none !important; }
   70%  { transform: translateY(-3px) scale(1.05); }
   100% { transform: translateY(0)    scale(1);    }
 }
+
+
+/* ── Responsive makeup workstation ─────────────────────────────────────── */
+#brush-bar { flex-wrap: wrap; justify-content: center; max-width: min(100%, 720px); white-space: normal; }
+#brush-bar select {
+  max-width: 104px; border: 1px solid rgba(255,130,200,.65); border-radius: 999px;
+  padding: 3px 7px; color: #660033; background: #fff; font-size: 10px; font-weight: 800;
+}
+@media (max-width: 900px) {
+  body { height: 100dvh; overflow: auto; }
+  #game { min-height: 100dvh; height: auto; flex-direction: column; }
+  #doll-side { width: 100%; padding: 12px 10px 8px; gap: 8px; }
+  #mainCanvas { width: min(62vw, 340px); height: auto; aspect-ratio: 400 / 550; }
+  #compact-side { width: 100%; padding: 8px 10px 14px; overflow: visible; }
+  #compact { height: min(62dvh, 560px); min-height: 340px; border-radius: 22px; }
+  #brush-bar { border-radius: 18px; padding: 7px 9px; gap: 6px; }
+  .brush-control { font-size: 9px; }
+  .brush-control input[type=range] { width: 54px; }
+}
+@media (max-width: 480px) {
+  #mainCanvas { width: min(72vw, 300px); }
+  #compact { min-height: 320px; height: 52dvh; }
+  #cat-nav { gap: 3px; }
+  .cat-tab { font-size: 8px; padding: 7px 2px; }
+  #skin-row { max-width: 94vw; }
+  .skin-dot { width: 19px; height: 19px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
