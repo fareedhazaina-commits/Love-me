@@ -20,7 +20,7 @@ Open `index.html` in a modern browser, or serve this folder with a local static 
 
 Stage 1: project structure, entry points and local asset references checked; baseline retained before engine changes.
 
-Stage 2: drawing input now uses Pointer Events for mouse, touch and stylus; pointer capture keeps strokes continuous; supported stylus pressure is used when available, with a fallback for ordinary mouse/touch; stroke stamps are interpolated and the canvas is rendered once per pointer event rather than once per stamp; the blending scratch canvas is reused rather than recreated for every stamp. Brush footprint now responds to pressure, and blending is constrained to the active product's application zone.
+Stage 2: drawing input now uses Pointer Events for mouse, touch and stylus; pointer capture keeps strokes continuous; supported stylus pressure is used when available, with a fallback for ordinary mouse/touch; stroke stamps are interpolated and the canvas is rendered once per pointer event rather than once per stamp; the blending scratch canvas is reused and smudge processing is limited to the local brush region rather than the full makeup layer. Brush footprint now responds to pressure, and blending is constrained to the active product's application zone.
 
 ## Known limitations still to address
 
