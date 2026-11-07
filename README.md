@@ -25,6 +25,9 @@ Stage 2: drawing input now uses Pointer Events for mouse, touch and stylus; poin
 ## Known limitations still to address
 
 - Product application still uses the existing approximate face-zone ellipses. These are not yet precise anatomical masks derived from the character artwork.
-- Cosmetic materials are still mostly soft pigment stamps. Dedicated matte, satin, shimmer, glitter, metallic and holographic renderers are future work.
+- Shimmer shades now receive deterministic micro-sparkle highlights; dedicated matte, satin, glitter, metallic and holographic material models remain future work.
 - The current character and canvas are fixed at 400 × 550 logical pixels; responsive display scales the canvas.
 - Browser interaction testing across physical phones, tablets and styluses is still required.
+
+
+Additional engine hardening: brush footprints and blending are clipped to the active product's current zone geometry; secondary pointers are ignored during an active stroke; strokes that begin outside an allowed zone no longer create empty undo entries; keyboard eraser and blend modes remain mutually exclusive.
