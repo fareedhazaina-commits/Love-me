@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Love, Me ✨</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <div id="sparkles"></div>
+
+  <!-- Animated applicator cursor -->
+  <div id="cursor-wrap" class="hidden">
+    <img id="cursor-img" draggable="false" alt=""/>
+    <span id="cursor-dot"></span>
+  </div>
+
+  <div id="game">
+
+    <!-- LEFT: Doll stage -->
+    <div id="doll-side">
+      <div id="doll-frame">
+        <canvas id="mainCanvas"></canvas>
+      </div>
+      <div id="skin-row"></div>
+      <div id="brush-bar" class="hidden">
+        <div class="brush-control">
+          <label>Size</label>
+          <input type="range" id="brush-size" min="4" max="80" value="20"/>
+        </div>
+        <div class="brush-control">
+          <label>Intensity</label>
+          <input type="range" id="brush-opacity" min="1" max="10" value="5"/>
+        </div>
+        <button id="eraser-btn">Erase</button>
+        <button id="blend-btn">Blend</button>
+        <button id="clear-layer-btn">Clear</button>
+        <button id="clear-all-btn">Clear All</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: Compact / vanity panel -->
+    <div id="compact-side">
+      <div id="compact">
+
+        <!-- Compact decorative top bar + category tabs -->
+        <div id="compact-header">
+          <div id="compact-gem-row">
+            <span class="gem">💎</span><span class="gem">✦</span><span class="gem">💎</span>
+            <span class="gem">✦</span><span class="gem">💎</span><span class="gem">✦</span>
+            <span class="gem">💎</span>
+          </div>
+          <div id="cat-nav">
+            <button class="cat-tab sel" data-cat="makeup">화장하기</button>
+            <button class="cat-tab" data-cat="face">페이스</button>
+            <button class="cat-tab" data-cat="hair">헤어</button>
+            <button class="cat-tab" data-cat="brows">눈썹·속눈썹</button>
+          </div>
+        </div>
+
+        <!-- Compact body — panes switch with tabs -->
+        <div id="compact-body">
+
+          <!-- MAKEUP: Eyes + Lips -->
+          <div class="cat-pane" id="cat-makeup">
+            <div class="csection">
+              <div class="csection-label">눈 · Eyes</div>
+              <div id="eye-shelf" class="crow"></div>
+            </div>
+            <div class="csection">
+              <div class="csection-label">입술 · Lips</div>
+              <div id="lipstick-shelf" class="clip-grid"></div>
+            </div>
+            <div class="csection">
+              <div class="csection-label">립글로스 · Gloss</div>
+              <div id="gloss-shelf" class="clip-grid"></div>
+            </div>
+          </div>
+
+          <!-- FACE: Foundation, Blush, Contour, Highlighter -->
+          <div class="cat-pane hidden" id="cat-face">
+            <div id="face-shelf" class="cface-grid"></div>
+          </div>
+
+          <!-- HAIR -->
+          <div class="cat-pane hidden" id="cat-hair">
+            <div id="hair-row" class="chair-grid"></div>
+          </div>
+
+          <!-- BROWS & LASHES -->
+          <div class="cat-pane hidden" id="cat-brows">
+            <div class="csection">
+              <div class="csection-label">눈썹 · Brows</div>
+              <div id="brow-shelf" class="crow"></div>
+            </div>
+            <div class="csection">
+              <div class="csection-label">속눈썹 · Lashes</div>
+              <div id="lash-shelf" class="crow"></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
