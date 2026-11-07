@@ -491,9 +491,20 @@ function applyBlendStroke(x, y, pressure = 0.5, shouldRender = true) {
     blendScratchCtx = blendScratch.getContext('2d');
   }
   const tc = blendScratchCtx;
-  tc.clearRect(0, 0, FACE_W, FACE_H);
-  tc.filter = `blur(${Math.max(3, Math.round(effR * 0.18))}px)`;
-  tc.drawImage(c, 0, 0);
+  const blurPx = Math.max(3, Math.round(effR * 0.18));
+  // Only refresh the local region around this stamp. The old implementation
+  // blurred and copied the entire makeup layer for every interpolated point,
+  // doing far more work than a local smudge requires.
+  const padding = Math.ceil(blurPx * 3);
+  const left = Math.max(0, Math.floor(x - effR - padding));
+  const top = Math.max(0, Math.floor(y - effR - padding));
+  const right = Math.min(FACE_W, Math.ceil(x + effR + padding));
+  const bottom = Math.min(FACE_H, Math.ceil(y + effR + padding));
+  const width = Math.max(1, right - left);
+  const height = Math.max(1, bottom - top);
+  tc.clearRect(left, top, width, height);
+  tc.filter = `blur(${blurPx}px)`;
+  tc.drawImage(c, left, top, width, height, left, top, width, height);
   tc.filter = 'none';
 
   // Composite blurred version into clip circle
