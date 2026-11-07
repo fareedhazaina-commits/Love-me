@@ -408,6 +408,10 @@ function bindBrushControls() {
   document.getElementById('brush-opacity').addEventListener('input', e => {
     brushOpacity = parseInt(e.target.value);
   });
+  const finishSelect = document.getElementById('finish-select');
+  finishSelect.addEventListener('change', e => { activeFinish = e.target.value; });
+  document.getElementById('undo-btn').addEventListener('click', () => { if (activeProductId) undoLayer(activeProductId); });
+  document.getElementById('redo-btn').addEventListener('click', () => { if (activeProductId) redoLayer(activeProductId); });
 
   const eraserBtn = document.getElementById('eraser-btn');
   eraserBtn.addEventListener('click', () => {
