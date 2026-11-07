@@ -583,9 +583,16 @@ function onPointerDown(e) {
   lastX = null; lastY = null;
   lastPressure = getPointerPressure(e);
   lastPointerTime = performance.now();
-  saveUndo(activeProductId);
   bounceApplicator();
   const { x, y } = getPos(e);
+  const canStartStroke = eraserMode || isInZone(activeProductId, x, y);
+  if (!canStartStroke) {
+    isDrawing = false;
+    activePointerId = null;
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    return;
+  }
+  saveUndo(activeProductId);
   if (blendingMode) applyBlendStroke(x, y, lastPressure, false);
   else applyStroke(x, y, lastPressure, 0, false);
   lastX = x; lastY = y;
