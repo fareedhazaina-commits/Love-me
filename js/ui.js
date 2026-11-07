@@ -446,12 +446,16 @@ function bindKeyboard() {
     if (e.key === 'Escape') deselect();
     if ((e.key === 'e' || e.key === 'E') && activeProductId) {
       eraserMode = !eraserMode;
+      if (eraserMode) blendingMode = false;
       document.getElementById('eraser-btn').classList.toggle('active', eraserMode);
+      document.getElementById('blend-btn').classList.toggle('active', blendingMode);
       updateCursor();
     }
     if ((e.key === 'b' || e.key === 'B') && activeProductId) {
       blendingMode = !blendingMode;
+      if (blendingMode) eraserMode = false;
       document.getElementById('blend-btn').classList.toggle('active', blendingMode);
+      document.getElementById('eraser-btn').classList.toggle('active', eraserMode);
       updateCursor();
     }
   });
