@@ -31,3 +31,11 @@ Stage 2: drawing input now uses Pointer Events for mouse, touch and stylus; poin
 
 
 Additional engine hardening: brush footprints and blending are clipped to the active product's current zone geometry; secondary pointers are ignored during an active stroke; strokes that begin outside an allowed zone no longer create empty undo entries; keyboard eraser and blend modes remain mutually exclusive.
+
+## Stage 3 implementation notes
+
+- Added a selectable finish override (Product, matte, velvet, satin, gloss, shimmer, glitter, metallic and holographic). The renderer uses distinct pigment strength, highlight and sparkle treatments; these are procedural approximations, not physically based cosmetic materials.
+- Added on-screen Undo and Redo controls alongside the existing keyboard shortcuts.
+- Added compact mobile/tablet layout rules, touch-friendly stacked layout and reduced-motion support.
+- Brush finish is intentionally non-destructive: it changes subsequent strokes only; existing makeup remains on its layer until erased or cleared.
+- Anatomical precision remains bounded by the current source artwork and zone geometry. The current ellipse masks are retained rather than fabricating facial contours without a verified mask aligned to the character image.
