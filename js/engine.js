@@ -339,6 +339,26 @@ function drawLipShine() {
 }
 
 // ─── ZONE CHECK ───────────────────────────────────────────────────────────────
+// Build one clipping path from the product's allowed face regions. Clipping the
+// whole brush footprint (not just its centre) prevents soft edges crossing the
+// boundary of the selected makeup area.
+function clipToProductZone(targetCtx, productId) {
+  const product = PRODUCTS[productId];
+  const ellipses = product && ZONES[product.zone];
+  if (!ellipses || !ellipses.length) return false;
+
+  targetCtx.beginPath();
+  ellipses.forEach(e => {
+    targetCtx.ellipse(
+      e.cx * FACE_W, e.cy * FACE_H,
+      e.rx * FACE_W, e.ry * FACE_H,
+      0, 0, Math.PI * 2
+    );
+  });
+  targetCtx.clip();
+  return true;
+}
+
 function isInZone(productId, x, y) {
   const key      = PRODUCTS[productId].zone;
   const ellipses = ZONES[key];
@@ -375,6 +395,7 @@ function applyStroke(x, y, pressure = 0.5, speed = 0, shouldRender = true) {
   if (!eraserMode && !isInZone(activeProductId, x, y)) return;
 
   lctx.save();
+  if (!eraserMode) clipToProductZone(lctx, activeProductId);
 
   if (eraserMode) {
     const g = lctx.createRadialGradient(x, y, 0, x, y, effR * 1.3);
@@ -438,6 +459,7 @@ function applyBlendStroke(x, y, pressure = 0.5, shouldRender = true) {
 
   // Composite blurred version into clip circle
   lctx.save();
+  clipToProductZone(lctx, activeProductId);
   lctx.beginPath();
   lctx.arc(x, y, effR, 0, Math.PI * 2);
   lctx.clip();
@@ -512,7 +534,9 @@ function getPointerPressure(e) {
 }
 
 function onPointerDown(e) {
-  if (!activeProductId || (e.button !== undefined && e.button !== 0)) return;
+  // Ignore secondary pointers while a stroke is active; this prevents a
+  // second finger from stealing pointer capture and corrupting the first path.
+  if (isDrawing || !activeProductId || (e.button !== undefined && e.button !== 0)) return;
   e.preventDefault();
   activePointerId = e.pointerId;
   try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
@@ -565,6 +589,9 @@ function onPointerMove(e) {
 
 function onPointerUp(e) {
   if (e && activePointerId !== null && e.pointerId !== activePointerId) return;
+  if (activePointerId !== null && canvas && canvas.hasPointerCapture(activePointerId)) {
+    try { canvas.releasePointerCapture(activePointerId); } catch (_) {}
+  }
   isDrawing = false;
   lastX = null; lastY = null;
   lastPointerTime = 0;
