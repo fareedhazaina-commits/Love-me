@@ -378,6 +378,38 @@ function hexToRgb(hex) {
   return { r: parseInt(h.slice(0,2),16), g: parseInt(h.slice(2,4),16), b: parseInt(h.slice(4,6),16) };
 }
 
+// Stable coordinate hash keeps shimmer placement deterministic across redraws.
+function shimmerHash(x, y, salt) {
+  const n = Math.sin((Math.floor(x * 0.73) + salt * 17) * 12.9898 +
+    (Math.floor(y * 0.73) - salt * 31) * 78.233) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+function drawShimmerStamp(targetCtx, x, y, radius, color) {
+  targetCtx.save();
+  targetCtx.globalCompositeOperation = 'screen';
+  const glintCount = 4;
+  for (let i = 0; i < glintCount; i++) {
+    const angle = shimmerHash(x, y, i + 1) * Math.PI * 2;
+    const distance = shimmerHash(y, x, i + 7) * radius * 0.68;
+    const px = x + Math.cos(angle) * distance;
+    const py = y + Math.sin(angle) * distance;
+    const size = 0.55 + shimmerHash(x + i, y - i, i + 13) * 1.35;
+    const alpha = 0.12 + shimmerHash(y + i, x - i, i + 19) * 0.22;
+    targetCtx.fillStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+    targetCtx.beginPath();
+    targetCtx.arc(px, py, size, 0, Math.PI * 2);
+    targetCtx.fill();
+  }
+  // A restrained colour lift preserves the selected shade beneath the glints.
+  targetCtx.globalAlpha = 0.10;
+  targetCtx.fillStyle = color;
+  targetCtx.beginPath();
+  targetCtx.arc(x, y, radius * 0.52, 0, Math.PI * 2);
+  targetCtx.fill();
+  targetCtx.restore();
+}
+
 function applyStroke(x, y, pressure = 0.5, speed = 0, shouldRender = true) {
   if (!activeProductId) return;
   if (!eraserMode && !activeShade) return;
@@ -429,6 +461,13 @@ function applyStroke(x, y, pressure = 0.5, speed = 0, shouldRender = true) {
   lctx.beginPath();
   lctx.arc(x, y, effR, 0, Math.PI * 2);
   lctx.fill();
+
+  // Existing shimmer shades now receive a subtle, repeatable micro-sparkle
+  // finish instead of being rendered exactly like matte pigments.
+  if (!eraserMode && activeShade.shimmer) {
+    const { r, g, b } = hexToRgb(activeShade.hex);
+    drawShimmerStamp(lctx, x, y, effR, `rgb(${r},${g},${b})`);
+  }
   lctx.restore();
   if (shouldRender) render();
 }
