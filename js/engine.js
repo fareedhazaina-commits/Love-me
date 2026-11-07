@@ -362,9 +362,15 @@ function applyStroke(x, y, pressure = 0.5, speed = 0, shouldRender = true) {
   if (!activeProductId) return;
   if (!eraserMode && !activeShade) return;
 
-  const product  = PRODUCTS[activeProductId];
-  const lctx     = layerCtxs[activeProductId];
-  const effR     = product.radius * (brushRadius / 20);
+  const product = PRODUCTS[activeProductId];
+  const lctx = layerCtxs[activeProductId];
+  if (!product || !lctx) return;
+
+  // Pressure changes both brush footprint and pigment load. A neutral 0.5
+  // pressure keeps mouse/touch behaviour identical to the previous baseline.
+  const normalizedPressure = Math.max(0.1, Math.min(1, Number(pressure) || 0.5));
+  const pressureScale = 0.78 + normalizedPressure * 0.44;
+  const effR = product.radius * (brushRadius / 20) * pressureScale;
 
   if (!eraserMode && !isInZone(activeProductId, x, y)) return;
 
@@ -382,9 +388,10 @@ function applyStroke(x, y, pressure = 0.5, speed = 0, shouldRender = true) {
     // Soft airbrush — 5-stop gradient for natural feathering
     // Real pressure is available on many styluses. Mouse/touch commonly report
     // a fixed or missing value, so pressure is normalised with a safe fallback.
-    const pressureFactor = Math.max(0.35, Math.min(1.35, 0.55 + pressure));
+    const pressureFactor = 0.55 + normalizedPressure;
     // Slower strokes deposit slightly more pigment; fast swipes stay lighter.
-    const speedFactor = 1.12 - Math.min(0.55, speed / 900);
+    const safeSpeed = Number.isFinite(speed) ? Math.max(0, speed) : 0;
+    const speedFactor = 1.12 - Math.min(0.55, safeSpeed / 900);
     const opacity = product.opacityStep * (brushOpacity / 5) * pressureFactor * speedFactor;
     const { r, g, b } = hexToRgb(activeShade.hex);
     const gr = lctx.createRadialGradient(x, y, 0, x, y, effR);
@@ -408,9 +415,14 @@ function applyStroke(x, y, pressure = 0.5, speed = 0, shouldRender = true) {
 // ─── BLEND STROKE ─────────────────────────────────────────────────────────────
 function applyBlendStroke(x, y, pressure = 0.5, shouldRender = true) {
   if (!activeProductId) return;
-  const c    = layers[activeProductId];
+  const product = PRODUCTS[activeProductId];
+  const c = layers[activeProductId];
   const lctx = layerCtxs[activeProductId];
-  const effR = PRODUCTS[activeProductId].radius * (brushRadius / 20) * 2.2;
+  if (!product || !c || !lctx || !isInZone(activeProductId, x, y)) return;
+
+  const normalizedPressure = Math.max(0.1, Math.min(1, Number(pressure) || 0.5));
+  const pressureScale = 0.78 + normalizedPressure * 0.44;
+  const effR = product.radius * (brushRadius / 20) * pressureScale * 2.2;
 
   // Reuse one scratch canvas instead of allocating a new canvas per stamp.
   if (!blendScratch) {
@@ -429,7 +441,7 @@ function applyBlendStroke(x, y, pressure = 0.5, shouldRender = true) {
   lctx.beginPath();
   lctx.arc(x, y, effR, 0, Math.PI * 2);
   lctx.clip();
-  lctx.globalAlpha = 0.22 * (brushOpacity / 5) * Math.max(0.35, Math.min(1.35, 0.55 + pressure));
+  lctx.globalAlpha = 0.22 * (brushOpacity / 5) * (0.55 + normalizedPressure);
   lctx.drawImage(blendScratch, 0, 0);
   lctx.restore();
   if (shouldRender) render();
