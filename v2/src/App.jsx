@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
 const stations = [
-  { id: 'wardrobe', label: 'Wardrobe', sub: 'Clothing & outfits', icon: '♧', position: 'wardrobe' },
-  { id: 'vanity', label: 'Beauty vanity', sub: 'Makeup & skincare', icon: '✿', position: 'vanity' },
-  { id: 'accessories', label: 'Accessories', sub: 'Jewellery & finishing touches', icon: '♡', position: 'accessories' },
+  { id: 'wardrobe', label: 'Wardrobe', sub: 'Clothing & outfits', icon: '♧', focus: 'left', position: 'wardrobe' },
+  { id: 'vanity', label: 'Beauty vanity', sub: 'Makeup & skincare', icon: '✿', focus: 'right', position: 'vanity' },
+  { id: 'accessories', label: 'Accessories', sub: 'Jewellery & finishing touches', icon: '♡', focus: 'right', position: 'accessories' },
 ];
 
 export default function App() {
@@ -15,9 +15,11 @@ export default function App() {
     setActiveStation(station);
   };
 
+  const focus = activeStation?.focus ?? 'center';
+
   return (
     <main className="game-shell">
-      <div className="room" aria-label="Love, Me dressing and beauty room">
+      <div className={`room focus-${focus}`} aria-label="Love, Me dressing and beauty room">
         <div className="room-image" />
         <div className="room-wash" />
 
