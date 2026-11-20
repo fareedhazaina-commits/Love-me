@@ -6,6 +6,6 @@ body { overflow: hidden; }
   width: 100%;
   height: 100vh;
   height: 100svh;
-  background: #fffdfb url('/room-background.webp') center center / contain no-repeat;
+  background: #fffdfb url('/room-background.webp') center center / 100% 100% no-repeat;
 }
 html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
