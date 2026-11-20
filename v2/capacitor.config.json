@@ -1,0 +1,7 @@
+{
+  "appId": "com.loveme.game",
+  "appName": "Love, Me",
+  "webDir": "dist",
+  "backgroundColor": "#fffdfb",
+  "android": { "allowMixedContent": false }
+}
