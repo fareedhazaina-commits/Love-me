@@ -55,7 +55,7 @@ button { font: inherit; }
 @media (max-width: 900px) {
   body { overflow: auto; }
   .game-shell { min-height: 100svh; height: 100svh; }
-  .room-image { background-size: auto 100%; background-position: center center; }
+  .room-image { background-size: auto 100%; background-position: center center; transition: background-position .55s ease; }\n  .focus-left .room-image { background-position: left center; }\n  .focus-right .room-image { background-position: right center; }
   .brand { top: 12px; left: 12px; transform: scale(.82); transform-origin: top left; }
   .room-nav { top: auto; right: 12px; left: 12px; bottom: 16px; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; }
   .station-link { min-width: 0; justify-content: center; flex-direction: column; gap: 4px; padding: 8px 4px; text-align: center; border-radius: 13px; }
@@ -70,7 +70,7 @@ button { font: inherit; }
   .station-panel { right: 12px; bottom: 82px; width: min(340px, calc(100vw - 24px)); }
 }
 @media (max-width: 480px) {
-  .room-image { background-size: auto 82%; background-position: center 45%; }
+  .room-image { background-size: auto 100%; background-position: center center; }\n  .focus-left .room-image { background-position: left center; }\n  .focus-right .room-image { background-position: right center; }
   .brand { transform: scale(.72); }
   .room-nav { grid-template-columns: repeat(3, 1fr); }
   .character-marker { display: none; }
