@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 const stations = [
   { id: 'wardrobe', label: 'Wardrobe', sub: 'Clothing & outfits', icon: '♧', focus: 'left', position: 'wardrobe' },
