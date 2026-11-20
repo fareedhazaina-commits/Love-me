@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'Nunito', sans-serif;
+  color: #62524e;
+  background: #fffdfb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+html, body, #root { width: 100%; min-width: 320px; min-height: 100%; margin: 0; }
+body { min-height: 100vh; overflow: hidden; }
+button { font: inherit; }
+.game-shell { width: 100%; height: 100vh; min-height: 560px; overflow: hidden; background: #fffdfb; }
+.room { position: relative; width: 100%; height: 100%; isolation: isolate; overflow: hidden; background: #fffdfb; }
+.room-image {
+  position: absolute; inset: 0; z-index: -2;
+  background-image: url('/room-background.webp');
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.room-wash { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,.14), transparent 30%, rgba(255,255,255,.04)); }
+.brand { position: absolute; left: clamp(18px, 3vw, 48px); top: clamp(16px, 3vh, 32px); display: grid; grid-template-columns: 42px auto; align-items: center; column-gap: 9px; padding: 9px 15px 9px 9px; border: 1px solid rgba(208,174,159,.65); border-radius: 18px; background: rgba(255,255,255,.88); box-shadow: 0 3px 0 rgba(211,187,173,.2); }
+.brand-mark { grid-row: span 2; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; color: #e77b9a; background: #fff0f3; font-size: 27px; }
+.brand-name { font-size: 19px; font-weight: 800; line-height: 1.05; color: #7a5b50; letter-spacing: -.5px; }
+.brand-caption { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #b08a7e; }
+.room-nav { position: absolute; top: clamp(18px, 3vh, 34px); right: clamp(18px, 3vw, 48px); display: flex; gap: 10px; }
+.station-link { display: flex; align-items: center; gap: 9px; min-width: 150px; padding: 10px 14px; text-align: left; border: 1px solid #e8d8ce; border-radius: 15px; color: #6b554d; background: rgba(255,255,255,.94); box-shadow: 0 3px 0 rgba(202,174,159,.2); cursor: pointer; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+.station-link:hover, .station-link.selected { transform: translateY(-3px); border-color: #e58aa4; background: #fff8fa; }
+.station-icon { display: grid; place-items: center; flex: 0 0 34px; height: 34px; border-radius: 11px; color: #df7895; background: #fff0f3; font-size: 22px; }
+.station-link strong, .station-link small { display: block; white-space: nowrap; }
+.station-link strong { font-size: 12px; font-weight: 800; }
+.station-link small { margin-top: 2px; font-size: 10px; color: #a58a80; }
+.room-hint { position: absolute; left: 50%; bottom: clamp(18px, 3vh, 34px); transform: translateX(-50%); padding: 8px 18px; border: 1px solid rgba(226,205,193,.9); border-radius: 99px; color: #8a7167; background: rgba(255,255,255,.88); font-size: 12px; letter-spacing: .3px; }
+.character-marker { position: absolute; left: 50%; top: 67%; width: 42px; height: 42px; display: grid; place-items: center; border: 2px solid white; border-radius: 50%; background: #e985a2; color: white; box-shadow: 0 3px 0 rgba(178,117,130,.22), 0 0 0 5px rgba(255,255,255,.55); transition: left .6s ease, top .6s ease; }
+.character-center { left: 50%; top: 68%; }
+.character-wardrobe { left: 13%; top: 58%; }
+.character-vanity { left: 82%; top: 60%; }
+.character-accessories { left: 75%; top: 45%; }
+.character-sparkle { position: absolute; top: -16px; right: -10px; color: #dcae62; font-size: 17px; }
+.character-dot { font-size: 20px; }
+.station-panel { position: absolute; right: clamp(18px, 4vw, 64px); bottom: clamp(18px, 4vh, 44px); width: min(360px, calc(100vw - 36px)); padding: 25px; border: 1px solid #e6d6cc; border-radius: 22px; background: rgba(255,255,255,.97); box-shadow: 0 12px 40px rgba(112,82,71,.14); animation: panel-in .22s ease-out; }
+@keyframes panel-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.close-panel { position: absolute; top: 10px; right: 14px; border: 0; background: transparent; color: #9d8277; font-size: 26px; cursor: pointer; }
+.panel-kicker { color: #df829b; font-size: 10px; font-weight: 800; letter-spacing: 2px; }
+.station-panel h1 { margin: 6px 0 2px; color: #70594f; font-size: 26px; }
+.station-panel p { margin: 0; color: #a0877b; font-size: 13px; }
+.panel-placeholder { display: grid; place-items: center; gap: 10px; min-height: 120px; margin: 18px 0; border: 1px dashed #e9d5d5; border-radius: 16px; background: #fffafb; text-align: center; }
+.panel-placeholder span { color: #e17f9d; font-size: 32px; }
+.panel-placeholder small { max-width: 220px; color: #a58d84; }
+.enter-button { width: 100%; padding: 11px; border: 0; border-radius: 12px; color: white; background: #d97896; font-weight: 800; cursor: pointer; }
+
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  .game-shell { min-height: 100svh; height: 100svh; }
+  .room-image { background-size: auto 100%; background-position: center center; }
+  .brand { top: 12px; left: 12px; transform: scale(.82); transform-origin: top left; }
+  .room-nav { top: auto; right: 12px; left: 12px; bottom: 16px; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; }
+  .station-link { min-width: 0; justify-content: center; flex-direction: column; gap: 4px; padding: 8px 4px; text-align: center; border-radius: 13px; }
+  .station-icon { flex-basis: 28px; width: 28px; height: 28px; font-size: 18px; }
+  .station-link strong { font-size: 10px; }
+  .station-link small { display: none; }
+  .room-hint { bottom: 86px; font-size: 10px; white-space: nowrap; }
+  .character-marker { width: 34px; height: 34px; }
+  .character-wardrobe { left: 12%; top: 57%; }
+  .character-vanity { left: 84%; top: 60%; }
+  .character-accessories { left: 76%; top: 45%; }
+  .station-panel { right: 12px; bottom: 82px; width: min(340px, calc(100vw - 24px)); }
+}
+@media (max-width: 480px) {
+  .room-image { background-size: auto 82%; background-position: center 45%; }
+  .brand { transform: scale(.72); }
+  .room-nav { grid-template-columns: repeat(3, 1fr); }
+  .character-marker { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
