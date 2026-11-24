@@ -153,20 +153,32 @@ img { -webkit-user-drag: none; user-select: none; }
 
 /* ---- the brush (small, so it is easy to place) ---- */
 .brush {
+  --bh: 21vh;
   position: absolute;
   z-index: 6;
-  right: max(10px, env(safe-area-inset-right));
+  /* the brush leans toward the lower right, so leave room for it beside the screen edge */
+  right: calc(max(10px, env(safe-area-inset-right)) + var(--bh) * 0.5);
   bottom: max(10px, env(safe-area-inset-bottom));
-  height: 21vh;
+  height: var(--bh);
   aspect-ratio: 612 / 1949;
+  pointer-events: none;           /* only the rotated brush itself can be grabbed */
+  animation: rise .5s .1s ease-out both;
+}
+/* Held like a real blush brush: bristles to the upper left, handle toward the lower right (45 degrees),
+   pivoting on the bristle tip so the painting point stays exactly where the tip is. */
+.brush-rot {
+  position: absolute;
+  inset: 0;
   isolation: isolate;
+  transform: rotate(-45deg);
+  transform-origin: 50% 8%;
+  pointer-events: auto;
   cursor: grab;
   touch-action: none;
   user-select: none;
-  animation: rise .5s .1s ease-out both;
 }
-.brush:active { cursor: grabbing; }
-.brush > img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 4px 5px rgba(110, 70, 90, .3)); pointer-events: none; }
+.brush-rot:active { cursor: grabbing; }
+.brush-rot > img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 4px 5px rgba(110, 70, 90, .3)); pointer-events: none; }
 
 /* Only the topmost layer of bristles takes the shade (solid, multiplied over the white). */
 .bristle-tint {
@@ -209,7 +221,7 @@ img { -webkit-user-drag: none; user-select: none; }
 /* Tall/narrow screens: palette on the left, brush on the right. */
 @media (max-aspect-ratio: 1/1) {
   .palette { left: 3vw; transform: none; width: 70vw; }
-  .brush { height: 19vh; }
+  .brush { --bh: 19vh; }
 }
 
 @media (prefers-reduced-motion: reduce) {
