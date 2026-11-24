@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SHADES } from './shades.js';
+import dollMeta from './doll.json';   // written by tools/prep_doll.py
 
 // ---- artwork (made by tools/prep_doll.py) ----
 const DOLL = '/doll/doll.webp';
 const EYES_CLOSED = '/doll/eyes-closed.webp';      // only the eyes; swapped in for a blink
 const SKIN_MASK = '/doll/skin-mask.png';
-const EYES = { x: 41.4062, y: 10.4167, w: 17.8711, h: 5.3385 }; // % of the doll (from doll.json)
+const EYES = dollMeta.eyes;                         // eye patch position, % of the doll
 
-// ---- makeup canvases: 2x the 1024x1536 doll so zoomed-in strokes stay sharp ----
+// ---- makeup canvases: about 1.5x the doll's pixels (capped for phone memory) ----
 const CANVAS_W = 2048;
 const CANVAS_H = 3072;
 const BRUSH_RADIUS = 34;        // canvas px

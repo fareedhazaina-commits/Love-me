@@ -36,7 +36,7 @@ img { -webkit-user-drag: none; user-select: none; }
   position: absolute;
   bottom: 4%;
   height: 66%;
-  aspect-ratio: 1024 / 1536;
+  aspect-ratio: 1333 / 2000;
   transform: translateX(-50%);
   pointer-events: none;
   user-select: none;
