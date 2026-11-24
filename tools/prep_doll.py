@@ -6,6 +6,7 @@ Output (v2/public/doll/):
   doll.webp         the open-eyes doll, background removed (lossless RGBA, original pixel size)
   eyes-closed.webp  ONLY the closed-eyes patch (feathered), so a blink swaps just the eyes
   skin-mask.png     alpha mask of bare skin (face, eyelids, ears, neck, arms, legs) for makeup
+  zone-blush.png    where blush may be applied (two soft cheek areas inside the skin mask)
   (also v2/src/doll.json: image size and the eye-patch position, as % of the doll)
 
 Run:  python tools/prep_doll.py
@@ -120,6 +121,25 @@ mask_f = ndi.gaussian_filter(mask.astype(np.float32), 0.9 * S)
 mrgba = np.zeros((H, W, 4), np.uint8); mrgba[..., 3] = (mask_f * 255).round().astype(np.uint8)
 Image.fromarray(mrgba, "RGBA").save(os.path.join(OUT, "skin-mask.png"), optimize=True)
 print("skin mask coverage", round(float(mask.mean()), 3))
+
+# ---------- 5. product zones: where blush is allowed (two soft cheek shapes, inside the skin mask)
+# Fractions of the doll width, measured on this doll (cheek level, under the eyes, clear of the nose,
+# mouth, eyes and ears). Other products (eyeshadow, lipstick...) get their own zone the same way.
+def soft_ellipse(cx, cy, rx, ry, edge=0.45):
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    r = np.sqrt(((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2)
+    t = np.clip((1.0 - r) / edge, 0.0, 1.0)            # 1 in the middle, fading to 0 at the rim
+    return t * t * (3 - 2 * t)                         # smoothstep
+
+CHEEKS = [(0.4575, 0.1605), (0.5405, 0.1605)]            # (x, y) as fractions of width / height
+RX, RY = 0.042 * W, 0.029 * W
+zone = np.zeros((H, W), np.float32)
+for fx, fy in CHEEKS:
+    zone = np.maximum(zone, soft_ellipse(fx * W, fy * H, RX, RY))
+zone = zone * mask_f                                     # never outside the skin
+zrgba = np.zeros((H, W, 4), np.uint8); zrgba[..., 3] = (zone * 255).round().astype(np.uint8)
+Image.fromarray(zrgba, "RGBA").save(os.path.join(OUT, "zone-blush.png"), optimize=True)
+print("blush zone saved")
 
 json.dump({"width": int(W), "height": int(H),
            "eyes": {"x": round(x0 / W * 100, 4), "y": round(y0 / H * 100, 4),

@@ -117,7 +117,7 @@ img { -webkit-user-drag: none; user-select: none; }
   left: 50%;
   z-index: 5;
   transform: translateX(-50%);
-  max-width: calc(100vw - 140px);
+  max-width: max(160px, calc(100vw - 480px));   /* stays clear of the back and tool buttons */
   padding: 8px 16px;
   border-radius: 99px;
   color: #8a5a66;
@@ -172,11 +172,14 @@ img { -webkit-user-drag: none; user-select: none; }
   isolation: isolate;
   transform: rotate(-45deg);
   transform-origin: 50% 8%;
+  transition: transform .22s ease;
   pointer-events: auto;
   cursor: grab;
   touch-action: none;
   user-select: none;
 }
+/* working on the left cheek: the handle swings to the lower left (same 45 degrees, mirrored) */
+.brush-rot.side-left { transform: rotate(45deg); }
 .brush-rot:active { cursor: grabbing; }
 .brush-rot > img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 4px 5px rgba(110, 70, 90, .3)); pointer-events: none; }
 
@@ -218,10 +221,107 @@ img { -webkit-user-drag: none; user-select: none; }
 @keyframes glint { from { opacity: .45; } to { opacity: 1; } }
 @keyframes rise { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }
 
+/* ---- the pans: a faint dent where the brush has been, and a puff of colour on each dab ---- */
+.swatch::after {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: calc(var(--dent, 0) * 0.85);
+  background:
+    radial-gradient(ellipse at 42% 38%, rgba(255, 255, 255, .55) 0 18%, transparent 46%),
+    radial-gradient(ellipse at 56% 62%, rgba(90, 40, 60, .28) 0 22%, transparent 62%);
+  transition: opacity .3s ease;
+}
+.puff { position: absolute; width: 0; height: 0; pointer-events: none; z-index: 2; }
+.puff i {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  opacity: 0;
+  animation: puff .65s ease-out forwards;
+}
+@keyframes puff {
+  0% { opacity: .95; transform: translate(0, 0) scale(.6); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.5); }
+}
+
+/* ---- the eraser (left of the palette) ---- */
+.eraser {
+  position: absolute;
+  z-index: 6;
+  left: calc(max(10px, env(safe-area-inset-left)) + 2vh);
+  bottom: max(14px, env(safe-area-inset-bottom));
+  width: 16vh;
+  aspect-ratio: 640 / 412;
+  pointer-events: none;
+  animation: rise .5s .15s ease-out both;
+}
+.eraser-rot {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-10deg);
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.eraser-rot:active { cursor: grabbing; }
+.eraser-rot > img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 4px 5px rgba(110, 70, 90, .3)); pointer-events: none; }
+
+/* ---- undo / redo / clean brush / clear all ---- */
+.toolbar {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+}
+.toolbar button {
+  display: grid;
+  place-items: center;
+  min-width: 42px;
+  height: 42px;
+  padding: 0 10px;
+  border: 2px solid #fff;
+  border-radius: 21px;
+  color: #fff;
+  background: #ee86a6;
+  box-shadow: 0 3px 8px rgba(150, 80, 100, .3);
+  cursor: pointer;
+  transition: opacity .2s ease, background .2s ease;
+}
+.toolbar button:disabled { opacity: .4; cursor: default; }
+.toolbar button.sure { background: #d9456f; }
+.sure-text { font: 700 13px/1 system-ui, sans-serif; }
+
+/* ---- the cheek zones, shown briefly when you lift a loaded brush ---- */
+.zone-guide {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 92, 150, .85), rgba(255, 92, 150, .6));
+  pointer-events: none;
+  opacity: 0;
+  animation: guide 1.8s ease-in-out both;
+}
+@keyframes guide {
+  0% { opacity: 0; }
+  22% { opacity: .75; }
+  70% { opacity: .75; }
+  100% { opacity: 0; }
+}
+
 /* Tall/narrow screens: palette on the left, brush on the right. */
 @media (max-aspect-ratio: 1/1) {
   .palette { left: 3vw; transform: none; width: 70vw; }
   .brush { --bh: 19vh; }
+  /* the eraser sits just above the palette; the hint drops below the buttons */
+  .eraser { left: 3vw; bottom: calc(35.5vw + 22px); width: 18vw; }
+  .hint { top: 66px; max-width: calc(100vw - 24px); }
+  .toolbar button { min-width: 38px; height: 38px; padding: 0 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
