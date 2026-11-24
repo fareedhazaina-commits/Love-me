@@ -19,23 +19,40 @@ img { -webkit-user-drag: none; user-select: none; }
 .world {
   position: absolute;
   inset: 0;
-  background: url('/room-background.webp') center center / 100% 100% no-repeat;
-  transition: transform .85s cubic-bezier(.4, 0, .2, 1);
+  transition: transform .9s cubic-bezier(.4, 0, .2, 1);
   will-change: transform;
 }
+.scene-bg {
+  position: absolute;
+  inset: 0;
+  background: url('/room-background.webp') center center / 100% 100% no-repeat;
+  transition: filter .9s ease;
+}
+/* when zoomed in, the room softens like a camera focusing on her face */
+.stage-zoomed .scene-bg { filter: blur(3px); }
 
+/* ---- the doll ---- */
 .doll {
   position: absolute;
-  left: 50%;
   bottom: 4%;
   height: 66%;
-  aspect-ratio: 408 / 612;
+  aspect-ratio: 1024 / 1536;
   transform: translateX(-50%);
   pointer-events: none;
   user-select: none;
+  transition: left 1.5s cubic-bezier(.45, .05, .35, 1);
+}
+.doll-sway { position: absolute; inset: 0; isolation: isolate; transform-origin: 50% 100%; }
+.is-walking .doll-sway { animation: walk .5s ease-in-out infinite; }
+@keyframes walk {
+  0%, 100% { transform: translateY(0) rotate(-0.8deg); }
+  50% { transform: translateY(-1.1%) rotate(0.8deg); }
 }
 .doll-img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.makeup-layer {
+.doll-eyes { position: absolute; display: block; }
+
+/* makeup layers sit on the doll and are cut to her bare skin by the mask */
+.layer {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -45,8 +62,15 @@ img { -webkit-user-drag: none; user-select: none; }
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
 }
+/* multiply lets her skin shading show through, so the blush reads as colour on skin, not paint */
+.layer-blush { mix-blend-mode: multiply; opacity: .9; }
+.layer-glitter { animation: twinkle 2.4s ease-in-out infinite alternate; }
+@keyframes twinkle {
+  from { filter: brightness(1) saturate(1); }
+  to { filter: brightness(1.28) saturate(1.15); }
+}
 
-/* Button that opens the makeup station, sitting by the vanity. */
+/* ---- button that sends her to the vanity ---- */
 .face-btn {
   position: absolute;
   left: 79%;
@@ -63,13 +87,13 @@ img { -webkit-user-drag: none; user-select: none; }
 }
 .face-btn img { display: block; width: 100%; height: auto; filter: drop-shadow(0 3px 4px rgba(150, 90, 100, .25)); }
 .face-btn:hover img, .face-btn:focus-visible img { filter: drop-shadow(0 3px 4px rgba(150, 90, 100, .25)) brightness(1.04); }
-.is-makeup .face-btn { opacity: 0; pointer-events: none; }
+.room:not(.stage-room) .face-btn { opacity: 0; pointer-events: none; }
 @keyframes float {
   0%, 100% { transform: translate(-50%, -50%); }
   50% { transform: translate(-50%, calc(-50% - 5px)); }
 }
 
-/* ---- Makeup station (screen-fixed UI, not zoomed) ---- */
+/* ---- makeup station (screen-fixed UI, not zoomed) ---- */
 .back-btn {
   position: absolute;
   top: max(12px, env(safe-area-inset-top));
@@ -127,13 +151,15 @@ img { -webkit-user-drag: none; user-select: none; }
 .swatch.on { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #ee86a6; }
 .swatch:focus-visible { outline: 3px solid #ee86a6; }
 
+/* ---- the brush (small, so it is easy to place) ---- */
 .brush {
   position: absolute;
   z-index: 6;
   right: max(10px, env(safe-area-inset-right));
   bottom: max(10px, env(safe-area-inset-bottom));
-  height: 30vh;
+  height: 21vh;
   aspect-ratio: 612 / 1949;
+  isolation: isolate;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -141,27 +167,52 @@ img { -webkit-user-drag: none; user-select: none; }
 }
 .brush:active { cursor: grabbing; }
 .brush > img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 4px 5px rgba(110, 70, 90, .3)); pointer-events: none; }
-/* The shade tints only the white bristles (top part of the brush). */
+
+/* Only the topmost layer of bristles takes the shade (solid, multiplied over the white). */
 .bristle-tint {
   position: absolute;
   inset: 0;
   pointer-events: none;
   mix-blend-mode: multiply;
-  opacity: .55;
-  clip-path: inset(0 0 74% 0);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 8%, transparent 15%);
+  mask-image: linear-gradient(to bottom, #000 0, #000 8%, transparent 15%);
+}
+.bristle-tint i {
+  position: absolute;
+  inset: 0;
   -webkit-mask-size: 100% 100%;
   mask-size: 100% 100%;
   transition: background .25s ease;
 }
+/* glitter shades: sparkles glinting on the coloured bristle tip */
+.bristle-glitter {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask-image: url('/makeup/brush.webp'), linear-gradient(to bottom, #000 0, #000 9%, transparent 15%);
+  -webkit-mask-composite: source-in;
+  mask-image: url('/makeup/brush.webp'), linear-gradient(to bottom, #000 0, #000 9%, transparent 15%);
+  mask-composite: intersect;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  background-image:
+    radial-gradient(circle at 50% 50%, #fff 0 1.2px, transparent 2.4px),
+    radial-gradient(circle at 50% 50%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 50% 50%, #fffbe0 0 1.6px, transparent 3px);
+  background-size: 13px 11px, 9px 12px, 19px 15px;
+  background-position: 2px 3px, 6px 1px, 9px 7px;
+  animation: glint 1.3s ease-in-out infinite alternate;
+}
+@keyframes glint { from { opacity: .45; } to { opacity: 1; } }
 @keyframes rise { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }
 
 /* Tall/narrow screens: palette on the left, brush on the right. */
 @media (max-aspect-ratio: 1/1) {
   .palette { left: 3vw; transform: none; width: 70vw; }
-  .brush { height: 26vh; }
+  .brush { height: 19vh; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .world { transition-duration: .01ms; }
-  .face-btn { animation: none; }
+  .world, .doll { transition-duration: .01ms; }
+  .face-btn, .is-walking .doll-sway, .layer-glitter, .bristle-glitter { animation: none; }
 }
