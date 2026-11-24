@@ -117,6 +117,7 @@ frac = sk_count / np.maximum(sizes, 1)
 keep = [i for i in range(1, n + 1) if sizes[i] >= 150 * S * S and frac[i] >= 0.35]
 mask = np.isin(lab, keep)
 mask = ndi.binary_dilation(mask, iterations=max(1, int(round(2 * S)))) & (doll_alpha > 0.3)   # reach the outline
+skin_full = mask.copy()          # all her skin, before the eyes are cut out (used for the blush placement)
 
 # The outline round each eye has small gaps, so the whites of the eyes can leak into the skin region.
 # Cut the eyes out explicitly: whatever changes when she closes her eyes is eyeball, not skin.
@@ -130,33 +131,44 @@ mrgba = np.zeros((H, W, 4), np.uint8); mrgba[..., 3] = (mask_f * 255).round().as
 Image.fromarray(mrgba, "RGBA").save(os.path.join(OUT, "skin-mask.png"), optimize=True)
 print("skin mask coverage", round(float(mask.mean()), 3))
 
-# ---------- 5. where makeup may go: her FACE (forehead, cheeks, nose, chin, jaw)
-# Not the eyes, ears, lips or neck. Built from the skin mask: keep the piece that is the face (ears are
-# separate pieces; they are joined only by a thin sliver, so an erode / grow cleanly cuts them off),
-# stop at the jaw, and leave the lips out. Other products (eyeshadow, lipstick...) can get their own
-# zone the same way, later.
-def soft_ellipse(cx, cy, rx, ry, edge=0.45):
+# ---------- 5. blush placement, taken from the user's own screenshot of where they apply it
+# Measured by aligning the screenshot to this doll (iris centres 159 px apart there vs 109 px here):
+#   cheeks   centred at (599, 298) and (728, 298) on the 1333 px doll: right under the outer half of
+#            each eye, over the cheekbone, close to the face outline (the blush they painted was
+#            about 70 x 55 px; the zone is a little larger and fades softly so strokes stay smooth)
+#   forehead a small circle at the top (665, 172);  nose a tiny one (667, 311);  chin a small one (664, 368)
+# Everything is limited to skin, and fades out smoothly near the eyes (no hard, flat edge there).
+# Other products (eyeshadow, lipstick...) can get their own placement the same way, later.
+def soft_ellipse(cx, cy, rx, ry, edge=0.5):
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
     r = np.sqrt(((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2)
     t = np.clip((1.0 - r) / edge, 0.0, 1.0)            # 1 in the middle, fading to 0 at the rim
     return t * t * (3 - 2 * t)                         # smoothstep
 
-yy_, xx_ = np.mgrid[0:H, 0:W]
-# Her face is about +-95 px wide (on a 1333 px doll) around the centre line, while the ears start at
-# about +-102 px. Keeping only skin within +-100 px drops the ears but keeps every thin strip of skin
-# beside and above the eyes.
-face = mask & (np.abs(xx_ - 0.4985 * W) <= 0.075 * W)
+PLACES = [  # (x, y, rx, ry) in px on a 1333 px wide doll; scaled to this image below
+    (599, 298, 40, 34), (728, 298, 40, 34),            # cheeks
+    (665, 172, 24, 24),                                # forehead, top
+    (667, 311, 15, 15),                                # nose
+    (664, 368, 20, 20),                                # chin
+]
+k = W / 1333.0
+zone = np.zeros((H, W), np.float32)
+for (px, py, rx, ry) in PLACES:
+    zone = np.maximum(zone, soft_ellipse(px * k, py * k, rx * k, ry * k))
 
-JAW_Y, JAW_FADE = 0.194 * H, 0.008 * H                 # the chin ends here; fade out just before it
-rows = np.clip((JAW_Y - np.arange(H, dtype=np.float32)) / JAW_FADE, 0, 1)[:, None]
-lips = soft_ellipse(0.5010 * W, 0.1715 * H, 0.0225 * W, 0.0090 * W, edge=0.5)   # keep the lips clear
+skin_soft = ndi.gaussian_filter(skin_full.astype(np.float32), 0.9 * S)
+# zero on the eyeballs, then a smooth ramp over ~16 px, so blush eases in under the lower lid
+# (like the blush in the screenshot) instead of stopping at a hard line
+dist_eye = ndi.distance_transform_edt(~eye_area)
+t = np.clip(dist_eye / (12.0 * S), 0.0, 1.0)
+away_from_eye = t * t * (3 - 2 * t)
+zone = zone * skin_soft * away_from_eye
 
-zone = ndi.gaussian_filter(face.astype(np.float32), 0.9 * S) * rows * (1.0 - lips)
 zrgba = np.zeros((H, W, 4), np.uint8); zrgba[..., 3] = (zone * 255).round().astype(np.uint8)
-Image.fromarray(zrgba, "RGBA").save(os.path.join(OUT, "zone-face.png"), optimize=True)
-if os.path.exists(os.path.join(OUT, "zone-blush.png")):
-    os.remove(os.path.join(OUT, "zone-blush.png"))
-print("face zone saved; coverage", round(float((zone > 0.5).mean()), 3))
+Image.fromarray(zrgba, "RGBA").save(os.path.join(OUT, "zone-blush.png"), optimize=True)
+if os.path.exists(os.path.join(OUT, "zone-face.png")):
+    os.remove(os.path.join(OUT, "zone-face.png"))
+print("blush placement saved; coverage", round(float((zone > 0.5).mean()), 4))
 
 json.dump({"width": int(W), "height": int(H),
            "eyes": {"x": round(x0 / W * 100, 4), "y": round(y0 / H * 100, 4),

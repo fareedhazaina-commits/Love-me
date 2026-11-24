@@ -6,10 +6,10 @@ import { Painter, CANVAS_W, PAINT_H, PAINT_FRAC } from './painter.js';
 // ---- artwork (made by tools/prep_doll.py and tools/prep_makeup.py) ----
 const DOLL = '/doll/doll.webp';
 const EYES_CLOSED = '/doll/eyes-closed.webp';      // only the eyes; swapped in for a blink
-// No placement rules at the moment: makeup can go anywhere on her. The only limit is her outline
-// (the doll image itself is the mask), so paint never floats out into the room.
-// zone-face.png / skin-mask.png are still built by tools/prep_doll.py, ready for when the exact
-// placement is decided.
+// Where blush may go: the placement the user showed (soft cheek ovals under the outer half of the eyes,
+// plus small spots on the forehead top, nose and chin), built by tools/prep_doll.py. Paint outside it
+// simply does not apply. The doll image itself masks the layers, so nothing floats out into the room.
+const ZONE_BLUSH = '/doll/zone-blush.png';
 const EYES = dollMeta.eyes;                         // eye patch position, % of the doll
 
 // ---- the brush: dip it in a pan to load colour, painting uses it up ----
@@ -112,9 +112,26 @@ export default function App() {
   const later = (fn, ms) => { timers.current.push(setTimeout(fn, ms)); };
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  // ---- set up the painter (no placement zone is set, so it paints anywhere) ----
+  // ---- set up the painter and load the blush placement ----
   useEffect(() => {
     painter.current = new Painter(blushEl.current, glitterEl.current);
+    let alive = true;
+    const img = new Image();
+    img.onload = () => {
+      if (!alive) return;
+      const c = document.createElement('canvas');
+      c.width = CANVAS_W;
+      c.height = PAINT_H;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      // the placement image covers the whole doll; keep the part we paint on (the top third)
+      ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight * PAINT_FRAC, 0, 0, CANVAS_W, PAINT_H);
+      const px = ctx.getImageData(0, 0, CANVAS_W, PAINT_H).data;
+      const alpha = new Uint8Array(CANVAS_W * PAINT_H);
+      for (let i = 0; i < alpha.length; i++) alpha[i] = px[i * 4 + 3];
+      painter.current.setZone(alpha);
+    };
+    img.src = ZONE_BLUSH;
+    return () => { alive = false; };
   }, []);
 
   const syncHistory = () => setHist({ undo: painter.current.canUndo, redo: painter.current.canRedo });
