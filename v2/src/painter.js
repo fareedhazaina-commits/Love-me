@@ -192,9 +192,19 @@ export class Painter {
     return { zw, rect: [x0, y0, x1, y1] };
   }
 
-  _diamond(x, y, rgb, glitter) {
+  // a sparkle of glitter: a few big diamonds and lots of miniature ones of the same shape
+  _glitter(x, y, rgb, radius, amount) {
+    const tinyN = Math.round(amount * (3 + Math.random() * 3));     // many miniature diamonds
+    for (let i = 0; i < tinyN; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const rad = Math.sqrt(Math.random()) * radius;
+      this._diamond(x + Math.cos(ang) * rad, y + Math.sin(ang) * rad, rgb, 1.5 + Math.random() * 1.6);
+    }
+  }
+
+  _diamond(x, y, rgb, size) {
     if (this.zoneAt(x, y) < 0.35) return;
-    const r = 4 + Math.random() * 4;
+    const r = size ?? 4 + Math.random() * 4;                        // big ones are 4-8 px, tiny ones 1.5-3 px
     this._touch(Math.floor(x - r - 1), Math.floor(y - r - 1), Math.ceil(x + r + 1), Math.ceil(y + r + 1));
     const t = 0.5 + Math.random() * 0.4;
     const [sr, sg, sb] = mix(rgb, [255, 255, 255], Math.random() < 0.2 ? 0.92 : t);
@@ -225,10 +235,13 @@ export class Painter {
       if (rect) {
         dirty = this._grow(rect, dirty);
         used += spacing * zw;
-        if (glitter > 0.05 && Math.random() < 0.16 * glitter * factor) {
-          const ang = Math.random() * Math.PI * 2;
-          const rad = Math.sqrt(Math.random()) * BRUSH_RADIUS * 0.9;
-          this._diamond(x + Math.cos(ang) * rad, y + Math.sin(ang) * rad, rgb, glitter);
+        if (glitter > 0.05) {
+          this._glitter(x, y, rgb, BRUSH_RADIUS * 0.9, glitter * factor);           // lots of tiny diamonds
+          if (Math.random() < 0.2 * glitter * factor) {                              // and the odd big one
+            const ang = Math.random() * Math.PI * 2;
+            const rad = Math.sqrt(Math.random()) * BRUSH_RADIUS * 0.9;
+            this._diamond(x + Math.cos(ang) * rad, y + Math.sin(ang) * rad, rgb);
+          }
         }
       }
       d += spacing;
@@ -243,11 +256,12 @@ export class Painter {
     if (!rect) return 0;
     this._flush(...rect);
     if (glitter > 0.05) {
-      const n = Math.random() < 0.55 * glitter * factor ? 2 : 0;
-      for (let i = 0; i < n; i++) {
+      for (let k = 0; k < (weak ? 2 : 3); k++) this._glitter(x, y, rgb, BRUSH_RADIUS * 0.85, glitter * factor);
+      const bigN = Math.random() < 0.7 * glitter * factor ? 1 + (Math.random() < 0.4 ? 1 : 0) : 0;
+      for (let i = 0; i < bigN; i++) {
         const ang = Math.random() * Math.PI * 2;
         const rad = Math.sqrt(Math.random()) * BRUSH_RADIUS * 0.8;
-        this._diamond(x + Math.cos(ang) * rad, y + Math.sin(ang) * rad, rgb, glitter);
+        this._diamond(x + Math.cos(ang) * rad, y + Math.sin(ang) * rad, rgb);
       }
     }
     return zw;

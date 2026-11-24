@@ -117,13 +117,22 @@ frac = sk_count / np.maximum(sizes, 1)
 keep = [i for i in range(1, n + 1) if sizes[i] >= 150 * S * S and frac[i] >= 0.35]
 mask = np.isin(lab, keep)
 mask = ndi.binary_dilation(mask, iterations=max(1, int(round(2 * S)))) & (doll_alpha > 0.3)   # reach the outline
-mask_f = ndi.gaussian_filter(mask.astype(np.float32), 0.9 * S)
+
+# The outline round each eye has small gaps, so the whites of the eyes can leak into the skin region.
+# Cut the eyes out explicitly: whatever changes when she closes her eyes is eyeball, not skin.
+eye_area = (diff > 45) & EYE_SEARCH
+eye_area = ndi.binary_closing(eye_area, structure=np.ones((3, 3)), iterations=max(1, int(round(3 * S))))
+eye_area = ndi.binary_fill_holes(eye_area)
+eye_area = ndi.binary_dilation(eye_area, iterations=max(1, int(round(2 * S))))
+mask = mask & ~eye_area
+mask_f =ndi.gaussian_filter(mask.astype(np.float32), 0.9 * S)
 mrgba = np.zeros((H, W, 4), np.uint8); mrgba[..., 3] = (mask_f * 255).round().astype(np.uint8)
 Image.fromarray(mrgba, "RGBA").save(os.path.join(OUT, "skin-mask.png"), optimize=True)
 print("skin mask coverage", round(float(mask.mean()), 3))
 
 # ---------- 5. product zones: where blush is allowed (two soft cheek shapes, inside the skin mask)
-# Fractions of the doll width, measured on this doll (cheek level, under the eyes, clear of the nose,
+# Fractions of the doll width, measured on this doll: blush goes on the cheekbone along the face outline,
+# from eye level to just below the eye (and stops before the nose ends), clear of the nose,
 # mouth, eyes and ears). Other products (eyeshadow, lipstick...) get their own zone the same way.
 def soft_ellipse(cx, cy, rx, ry, edge=0.45):
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
@@ -131,8 +140,8 @@ def soft_ellipse(cx, cy, rx, ry, edge=0.45):
     t = np.clip((1.0 - r) / edge, 0.0, 1.0)            # 1 in the middle, fading to 0 at the rim
     return t * t * (3 - 2 * t)                         # smoothstep
 
-CHEEKS = [(0.4575, 0.1605), (0.5405, 0.1605)]            # (x, y) as fractions of width / height
-RX, RY = 0.042 * W, 0.029 * W
+CHEEKS = [(0.4546, 0.141), (0.5444, 0.141)]            # (x, y) as fractions of width / height
+RX, RY = 0.027 * W, 0.030 * W
 zone = np.zeros((H, W), np.float32)
 for fx, fy in CHEEKS:
     zone = np.maximum(zone, soft_ellipse(fx * W, fy * H, RX, RY))
