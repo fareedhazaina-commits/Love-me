@@ -300,20 +300,6 @@ img { -webkit-user-drag: none; user-select: none; }
 .toolbar button.sure { background: #d9456f; }
 .sure-text { font: 700 13px/1 system-ui, sans-serif; }
 
-/* ---- the cheek zones, shown briefly when you lift a loaded brush ---- */
-.zone-guide {
-  background: radial-gradient(circle at 50% 50%, rgba(255, 92, 150, .85), rgba(255, 92, 150, .6));
-  pointer-events: none;
-  opacity: 0;
-  animation: guide 1.8s ease-in-out both;
-}
-@keyframes guide {
-  0% { opacity: 0; }
-  22% { opacity: .75; }
-  70% { opacity: .75; }
-  100% { opacity: 0; }
-}
-
 /* Tall/narrow screens: palette on the left, brush on the right. */
 @media (max-aspect-ratio: 1/1) {
   .palette { left: 3vw; transform: none; width: 70vw; }

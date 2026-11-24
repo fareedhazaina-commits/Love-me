@@ -130,25 +130,33 @@ mrgba = np.zeros((H, W, 4), np.uint8); mrgba[..., 3] = (mask_f * 255).round().as
 Image.fromarray(mrgba, "RGBA").save(os.path.join(OUT, "skin-mask.png"), optimize=True)
 print("skin mask coverage", round(float(mask.mean()), 3))
 
-# ---------- 5. product zones: where blush is allowed (two soft cheek shapes, inside the skin mask)
-# Fractions of the doll width, measured on this doll: blush goes on the cheekbone along the face outline,
-# from eye level to just below the eye (and stops before the nose ends), clear of the nose,
-# mouth, eyes and ears). Other products (eyeshadow, lipstick...) get their own zone the same way.
+# ---------- 5. where makeup may go: her FACE (forehead, cheeks, nose, chin, jaw)
+# Not the eyes, ears, lips or neck. Built from the skin mask: keep the piece that is the face (ears are
+# separate pieces; they are joined only by a thin sliver, so an erode / grow cleanly cuts them off),
+# stop at the jaw, and leave the lips out. Other products (eyeshadow, lipstick...) can get their own
+# zone the same way, later.
 def soft_ellipse(cx, cy, rx, ry, edge=0.45):
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
     r = np.sqrt(((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2)
     t = np.clip((1.0 - r) / edge, 0.0, 1.0)            # 1 in the middle, fading to 0 at the rim
     return t * t * (3 - 2 * t)                         # smoothstep
 
-CHEEKS = [(0.4546, 0.141), (0.5444, 0.141)]            # (x, y) as fractions of width / height
-RX, RY = 0.027 * W, 0.030 * W
-zone = np.zeros((H, W), np.float32)
-for fx, fy in CHEEKS:
-    zone = np.maximum(zone, soft_ellipse(fx * W, fy * H, RX, RY))
-zone = zone * mask_f                                     # never outside the skin
+yy_, xx_ = np.mgrid[0:H, 0:W]
+# Her face is about +-95 px wide (on a 1333 px doll) around the centre line, while the ears start at
+# about +-102 px. Keeping only skin within +-100 px drops the ears but keeps every thin strip of skin
+# beside and above the eyes.
+face = mask & (np.abs(xx_ - 0.4985 * W) <= 0.075 * W)
+
+JAW_Y, JAW_FADE = 0.194 * H, 0.008 * H                 # the chin ends here; fade out just before it
+rows = np.clip((JAW_Y - np.arange(H, dtype=np.float32)) / JAW_FADE, 0, 1)[:, None]
+lips = soft_ellipse(0.5010 * W, 0.1715 * H, 0.0225 * W, 0.0090 * W, edge=0.5)   # keep the lips clear
+
+zone = ndi.gaussian_filter(face.astype(np.float32), 0.9 * S) * rows * (1.0 - lips)
 zrgba = np.zeros((H, W, 4), np.uint8); zrgba[..., 3] = (zone * 255).round().astype(np.uint8)
-Image.fromarray(zrgba, "RGBA").save(os.path.join(OUT, "zone-blush.png"), optimize=True)
-print("blush zone saved")
+Image.fromarray(zrgba, "RGBA").save(os.path.join(OUT, "zone-face.png"), optimize=True)
+if os.path.exists(os.path.join(OUT, "zone-blush.png")):
+    os.remove(os.path.join(OUT, "zone-blush.png"))
+print("face zone saved; coverage", round(float((zone > 0.5).mean()), 3))
 
 json.dump({"width": int(W), "height": int(H),
            "eyes": {"x": round(x0 / W * 100, 4), "y": round(y0 / H * 100, 4),

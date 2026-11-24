@@ -7,7 +7,7 @@ import { Painter, CANVAS_W, PAINT_H, PAINT_FRAC } from './painter.js';
 const DOLL = '/doll/doll.webp';
 const EYES_CLOSED = '/doll/eyes-closed.webp';      // only the eyes; swapped in for a blink
 const SKIN_MASK = '/doll/skin-mask.png';
-const ZONE_BLUSH = '/doll/zone-blush.png';         // where blush may go: the cheeks
+const ZONE_FACE = '/doll/zone-face.png';           // where makeup may go: her face (not eyes, lips, ears, neck)
 const EYES = dollMeta.eyes;                         // eye patch position, % of the doll
 
 // ---- the brush: dip it in a pan to load colour, painting uses it up ----
@@ -93,8 +93,6 @@ export default function App() {
   const [lastPan, setLastPan] = useState(null);
   const [dips, setDips] = useState({});
   const [puffs, setPuffs] = useState([]);
-  const [guideKey, setGuideKey] = useState(0);
-  const guideArmed = useRef(false);
 
   // history buttons / hint
   const [painted, setPainted] = useState(false);
@@ -130,7 +128,7 @@ export default function App() {
       for (let i = 0; i < alpha.length; i++) alpha[i] = px[i * 4 + 3];
       painter.current.setZone(alpha);
     };
-    img.src = ZONE_BLUSH;
+    img.src = ZONE_FACE;
     return () => { alive = false; };
   }, []);
 
@@ -185,10 +183,9 @@ export default function App() {
     setPuffs((p) => [...p, { key, id: pan.id, hex: pan.hex }]);
     later(() => setPuffs((p) => p.filter((x) => x.key !== key)), 700);
     if (navigator.vibrate) navigator.vibrate(8);
-    guideArmed.current = true;                      // show the cheek zones next time the brush is lifted
   };
 
-  const cleanBrush = () => { setBrush(EMPTY_BRUSH); guideArmed.current = false; };
+  const cleanBrush = () => setBrush(EMPTY_BRUSH);
 
   // ---- pointer plumbing for the two tools ----
   const toCanvas = (p) => {
@@ -242,7 +239,6 @@ export default function App() {
     const pan = panAt(tip);
     if (pan) { dip(pan, LOAD_PER_DAB); return; }
     if (brushNow.current.load > 0.01) {
-      if (guideArmed.current) { guideArmed.current = false; setGuideKey((k) => k + 1); }   // show the cheek zones briefly
       const c = toCanvas(tip);
       if (painter.current.dab(c.x, c.y, brushParams()) > 0.02) { spend(DAB_COST); setPainted(true); }
     }
@@ -266,10 +262,6 @@ export default function App() {
 
       const b = brushNow.current;
       const onPan = panAt(tip);
-      if (guideArmed.current && b.load > 0.01 && !onPan) {   // a freshly loaded brush has left the pan:
-        guideArmed.current = false;                          // show the cheek zones for a moment
-        setGuideKey((k) => k + 1);
-      }
       if (b.load > 0.01 && !onPan) {
         const out = painter.current.blushSegment(toCanvas(d.last), toCanvas(tip), d.carry, brushParams());
         d.carry = out.carry;
@@ -339,9 +331,6 @@ export default function App() {
             />
             <canvas ref={blushEl} className="layer layer-blush" width={CANVAS_W} height={PAINT_H} style={maskOf(SKIN_MASK)} />
             <canvas ref={glitterEl} className="layer layer-glitter" width={CANVAS_W} height={PAINT_H} style={maskOf(SKIN_MASK)} />
-            {guideKey > 0 && (
-              <div key={guideKey} className="layer zone-guide" style={maskOf(ZONE_BLUSH)} />
-            )}
           </div>
         </div>
 
