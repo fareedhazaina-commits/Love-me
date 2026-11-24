@@ -2,14 +2,28 @@
 * { box-sizing: border-box; }
 html, body, #root { width: 100%; height: 100%; margin: 0; }
 body { overflow: hidden; }
+html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+img { -webkit-user-drag: none; user-select: none; }
+
 .room {
+  position: relative;
   width: 100%;
   height: 100vh;
   height: 100svh;
-  background: #fffdfb url('/room-background.webp') center center / 100% 100% no-repeat;
+  overflow: hidden;
+  overflow: clip; /* clip, unlike hidden, can never be scrolled by focus or scrollIntoView */
+  background: #fffdfb;
 }
-html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
-.room { position: relative; overflow: hidden; }
+
+/* Everything in the scene (room, doll, button) lives in .world so it zooms together. */
+.world {
+  position: absolute;
+  inset: 0;
+  background: url('/room-background.webp') center center / 100% 100% no-repeat;
+  transition: transform .85s cubic-bezier(.4, 0, .2, 1);
+  will-change: transform;
+}
+
 .doll {
   position: absolute;
   left: 50%;
@@ -21,3 +35,133 @@ html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; ove
   user-select: none;
 }
 .doll-img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.makeup-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+/* Button that opens the makeup station, sitting by the vanity. */
+.face-btn {
+  position: absolute;
+  left: 79%;
+  top: 74%;
+  width: 9vh;
+  min-width: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  animation: float 3.2s ease-in-out infinite;
+  transition: opacity .3s ease;
+}
+.face-btn img { display: block; width: 100%; height: auto; filter: drop-shadow(0 3px 4px rgba(150, 90, 100, .25)); }
+.face-btn:hover img, .face-btn:focus-visible img { filter: drop-shadow(0 3px 4px rgba(150, 90, 100, .25)) brightness(1.04); }
+.is-makeup .face-btn { opacity: 0; pointer-events: none; }
+@keyframes float {
+  0%, 100% { transform: translate(-50%, -50%); }
+  50% { transform: translate(-50%, calc(-50% - 5px)); }
+}
+
+/* ---- Makeup station (screen-fixed UI, not zoomed) ---- */
+.back-btn {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  z-index: 5;
+  width: 46px;
+  height: 46px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  background: #ee86a6;
+  box-shadow: 0 3px 8px rgba(150, 80, 100, .3);
+  font: 700 32px/1 system-ui, sans-serif;
+  padding: 0 0 4px;
+  cursor: pointer;
+}
+
+.hint {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 5;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 140px);
+  padding: 8px 16px;
+  border-radius: 99px;
+  color: #8a5a66;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 2px 8px rgba(150, 80, 100, .18);
+  font: 600 13px/1.25 system-ui, sans-serif;
+  text-align: center;
+  pointer-events: none;
+}
+
+.palette {
+  position: absolute;
+  z-index: 4;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  left: 50%;
+  width: min(92vw, 52vh);
+  aspect-ratio: 1200 / 609;
+  transform: translateX(-50%);
+  animation: rise .5s ease-out both;
+}
+.palette > img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 4px 8px rgba(110, 90, 120, .28)); }
+.swatch {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.swatch.on { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #ee86a6; }
+.swatch:focus-visible { outline: 3px solid #ee86a6; }
+
+.brush {
+  position: absolute;
+  z-index: 6;
+  right: max(10px, env(safe-area-inset-right));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  height: 30vh;
+  aspect-ratio: 612 / 1949;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  animation: rise .5s .1s ease-out both;
+}
+.brush:active { cursor: grabbing; }
+.brush > img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 4px 5px rgba(110, 70, 90, .3)); pointer-events: none; }
+/* The shade tints only the white bristles (top part of the brush). */
+.bristle-tint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: .55;
+  clip-path: inset(0 0 74% 0);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  transition: background .25s ease;
+}
+@keyframes rise { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }
+
+/* Tall/narrow screens: palette on the left, brush on the right. */
+@media (max-aspect-ratio: 1/1) {
+  .palette { left: 3vw; transform: none; width: 70vw; }
+  .brush { height: 26vh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world { transition-duration: .01ms; }
+  .face-btn { animation: none; }
+}
