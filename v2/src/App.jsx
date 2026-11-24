@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
-const OPEN = '/doll/doll-eyes-open.png';
-const CLOSED = '/doll/doll-eyes-closed.png';
+const OPEN = '/doll/bun-eyes-open.png';
+const CLOSED = '/doll/bun-eyes-closed.png';
 
 // Random blink: eyes open for 2.5–5.5s, then closed for ~140ms; sometimes a quick double blink.
 function useBlink() {
